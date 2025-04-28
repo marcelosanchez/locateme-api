@@ -1,0 +1,27 @@
+{
+  "name": "locateme-api",
+  "version": "1.0.0",
+  "description": "A lightweight and scalable REST API for receiving, storing, and serving device location data in real time.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/marcelosanchez/locateme-api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/marcelosanchez/locateme-api/issues"
+  },
+  "homepage": "https://github.com/marcelosanchez/locateme-api#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.0",
+    "pg": "^8.15.6"
+  }
+}
