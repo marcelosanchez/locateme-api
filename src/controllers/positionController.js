@@ -15,7 +15,7 @@ exports.receivePosition = async (req, res) => {
       await saveDeviceIfNotExists(device);
       await savePosition(position);
 
-      log(`[DB] Saved position for device_id: ${device.id}`);
+      log(`[DB] Saved position for device_id: ${device.device_id}`);
     }
 
     res.status(201).json({ message: 'All positions saved successfully' });
