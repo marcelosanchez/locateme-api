@@ -1,7 +1,7 @@
 const { savePosition } = require('../services/positionService');
 const { saveDeviceIfNotExists } = require('../services/deviceService');
 const { adaptDeviceAndPosition } = require('../adapters/positionAdapter');
-const { query } = require('../db');
+const pool = require('../db');
 
 exports.receivePosition = async (req, res) => {
   try {
@@ -23,7 +23,7 @@ exports.receivePosition = async (req, res) => {
 
 exports.getAllPositions = async (req, res) => {
   try {
-    const result = await query(`
+    const result = await pool.query(`
       SELECT 
         p.device_id,
         p.latitude,
