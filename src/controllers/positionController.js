@@ -1,6 +1,7 @@
 const { savePosition } = require('../services/positionService');
 const { saveDeviceIfNotExists } = require('../services/deviceService');
 const { adaptDeviceAndPosition } = require('../adapters/positionAdapter');
+const { query } = require('../db');
 
 exports.receivePosition = async (req, res) => {
   try {
@@ -17,5 +18,32 @@ exports.receivePosition = async (req, res) => {
   } catch (error) {
     console.error('Error saving position:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+exports.getAllPositions = async (req, res) => {
+  try {
+    const result = await query(`
+      SELECT 
+        p.device_id,
+        p.latitude,
+        p.longitude,
+        p.timestamp,
+        p.readable_datetime,
+        d.name AS device_name,
+        d.icon AS device_icon
+      FROM positions p
+      JOIN devices d ON p.device_id = d.id
+      INNER JOIN (
+          SELECT device_id, MAX(timestamp) AS max_timestamp
+          FROM positions
+          GROUP BY device_id
+      ) latest ON p.device_id = latest.device_id AND p.timestamp = latest.max_timestamp
+      ORDER BY p.device_id;
+    `);
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching latest positions:', error);
+    res.status(500).json({ error: 'Error fetching latest positions' });
   }
 };
