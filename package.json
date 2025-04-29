@@ -18,12 +18,15 @@
   },
   "homepage": "https://github.com/marcelosanchez/locateme-api#readme",
   "dependencies": {
+    "cookie-session": "^2.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "moment-timezone": "^0.5.48",
     "morgan": "^1.10.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "pg": "^8.15.6"
   }
 }
