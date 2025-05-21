@@ -7,8 +7,11 @@ const pool = require('../db');
  * @returns {Object} found or newly created user
  */
 async function findOrCreateUser(profile) {
-  const { id: googleId, emails } = profile;
-  const email = emails && emails.length > 0 ? emails[0].value : null;
+  const googleId = profile.sub || profile.id;
+  const email = profile.email || null;
+
+  console.log('[AUTH] Extracted googleId:', googleId);
+  console.log('[AUTH] Extracted email:', email);
 
   if (!email || !googleId) {
     throw new Error('Google profile is missing required information.');
@@ -28,13 +31,13 @@ async function findOrCreateUser(profile) {
 
     // If user does not exist, create a new one
     const { rows: insertedRows } = await pool.query(
-      `INSERT INTO users (email, google_id)
-       VALUES ($1, $2)
-       RETURNING *`,
+      `INSERT INTO users (email, google_id, active)
+      VALUES ($1, $2, false)
+      RETURNING *`,
       [email, googleId]
     );
 
-    console.log('[AUTH] New user created:', email);
+    console.log('[AUTH] New user created (inactive):', email);
     return insertedRows[0];
 
   } catch (err) {
