@@ -1,9 +1,8 @@
 const express = require('express');
-const { receivePosition, getAllPositions } = require('../controllers/positionController');
-
 const router = express.Router();
+const positionController = require('../controllers/positionController');
 
-router.post('/', receivePosition);
-router.get('/', getAllPositions);
+router.post('/', positionController.receivePosition);
+router.get('/', positionController.getAllPositions);
 
 module.exports = router;

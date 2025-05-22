@@ -1,7 +1,6 @@
-const { savePosition } = require('../services/positionService');
-const { saveDeviceIfNotExists } = require('../services/deviceService');
+const positionService = require('../services/positionService');
+const deviceService = require('../services/deviceService');
 const { adaptDeviceAndPosition } = require('../adapters/positionAdapter');
-const pool = require('../db');
 const { log, error } = require('../shared/utils/logger');
 
 exports.receivePosition = async (req, res) => {
@@ -12,15 +11,15 @@ exports.receivePosition = async (req, res) => {
     for (const item of dataArray) {
       const { device, position } = adaptDeviceAndPosition(item);
 
-      await saveDeviceIfNotExists(device);
-      await savePosition(position);
+      await deviceService.saveDeviceIfNotExists(device);
+      await positionService.savePosition(position);
 
       log(`[DB] Saved position for device_id: ${device.device_id}`);
     }
 
     res.status(201).json({ message: 'All positions saved successfully' });
   } catch (err) {
-    error('[ERROR] Error saving position:', err.message || err);
+    error('[PositionController] Error saving position:', err.message || err);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -28,31 +27,13 @@ exports.receivePosition = async (req, res) => {
 exports.getAllPositions = async (req, res) => {
   try {
     log(`[API] Fetching latest positions...`);
-    
-    const result = await pool.query(`
-      SELECT 
-        p.device_id,
-        p.latitude,
-        p.longitude,
-        p.timestamp,
-        p.readable_datetime,
-        d.name AS device_name,
-        d.icon AS device_icon
-      FROM positions p
-      JOIN devices d ON p.device_id = d.id
-      INNER JOIN (
-          SELECT device_id, MAX(timestamp) AS max_timestamp
-          FROM positions
-          GROUP BY device_id
-      ) latest ON p.device_id = latest.device_id AND p.timestamp = latest.max_timestamp
-      ORDER BY p.device_id;
-    `);
 
-    log(`[DB] Retrieved ${result.rowCount} latest positions`);
+    const rows = await positionService.fetchLatestPositions();
 
-    res.status(200).json(result.rows);
+    log(`[DB] Retrieved ${rows.length} latest positions`);
+    res.status(200).json(rows);
   } catch (err) {
-    error('[ERROR] Error fetching latest positions:', err.message || err);
+    error('[PositionController] Error fetching latest positions:', err.message || err);
     res.status(500).json({ error: 'Error fetching latest positions' });
   }
 };

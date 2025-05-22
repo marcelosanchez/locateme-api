@@ -32,6 +32,9 @@ coverage/
 build/
 dist/
 
+# DB backups
+/src/db/backups/
+
 # Optional cache directories
 .cache/
 .parcel-cache/

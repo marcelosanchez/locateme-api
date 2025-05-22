@@ -1,6 +1,6 @@
-const pool = require('../db');
+const { pool } = require('../config/db')
 
-exports.savePosition = async (positionData) => {
+exports.savePosition = async (position) => {
   const {
     device_id,
     latitude,
@@ -17,7 +17,7 @@ exports.savePosition = async (positionData) => {
     readable_datetime,
     battery_level,
     battery_status
-  } = positionData;
+  } = position;
 
   const query = `
     INSERT INTO positions (
@@ -52,4 +52,28 @@ exports.savePosition = async (positionData) => {
   ];
 
   await pool.query(query, values);
+};
+
+exports.fetchLatestPositions = async () => {
+  const query = `
+    SELECT 
+      p.device_id,
+      p.latitude,
+      p.longitude,
+      p.timestamp,
+      p.readable_datetime,
+      d.name AS device_name,
+      d.icon AS device_icon
+    FROM positions p
+    JOIN devices d ON p.device_id = d.id
+    INNER JOIN (
+        SELECT device_id, MAX(timestamp) AS max_timestamp
+        FROM positions
+        GROUP BY device_id
+    ) latest ON p.device_id = latest.device_id AND p.timestamp = latest.max_timestamp
+    ORDER BY p.device_id;
+  `;
+
+  const result = await pool.query(query);
+  return result.rows;
 };
