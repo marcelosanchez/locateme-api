@@ -1,4 +1,5 @@
-const { pool } = require('../config/db')
+const { pool } = require('../config/db');
+const { parseCustomDatetime } = require('../shared/utils/datetime');
 
 exports.savePosition = async (position) => {
   const {
@@ -77,3 +78,47 @@ exports.fetchLatestPositions = async () => {
   const result = await pool.query(query);
   return result.rows;
 };
+
+exports.getDevicePositionsHistory = async (deviceId, { limit = 4, start, end }) => {
+  let query = `
+    SELECT 
+      id, device_id, latitude, longitude, readable_datetime, "timestamp"
+    FROM positions
+    WHERE device_id = $1
+      AND latitude IS NOT NULL
+      AND longitude IS NOT NULL
+  `
+  const values = [deviceId]
+  let index = 2
+
+  if (start) {
+    query += ` AND readable_datetime >= $${index}`
+    values.push(parseCustomDatetime(start))
+    index++
+  }
+
+  if (end) {
+    query += ` AND readable_datetime <= $${index}`
+    values.push(parseCustomDatetime(end))
+    index++
+  }
+
+  query += `
+    ORDER BY "timestamp" DESC
+    LIMIT $${index}
+  `
+  values.push(limit)
+
+  const { rows } = await pool.query(query, values)
+
+  //remove duplicates
+  const seen = new Set()
+  const unique = rows.filter(row => {
+    const key = `${row.latitude},${row.longitude},${row.timestamp}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+
+  return unique
+}

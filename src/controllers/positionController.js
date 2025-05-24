@@ -37,3 +37,21 @@ exports.getAllPositions = async (req, res) => {
     res.status(500).json({ error: 'Error fetching latest positions' });
   }
 };
+
+exports.getDeviceHistory = async (req, res) => {
+  const { device_id } = req.params
+  const { limit = 4, start, end } = req.query
+
+  try {
+    const history = await positionService.getDevicePositionsHistory(device_id, {
+      limit: parseInt(limit, 10),
+      start,
+      end,
+    })
+
+    res.json(history)
+  } catch (err) {
+    console.error('[PositionController] Failed to fetch device history:', err.message)
+    res.status(500).json({ error: 'Failed to fetch device history' })
+  }
+}
