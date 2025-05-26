@@ -53,8 +53,11 @@ app.use(passport.session())
 // routes
 app.use('/auth', authRoutes)
 
+// protected
 app.use('/locateme/overview', isAuthenticated, overviewRoutes)
 app.use('/locateme/devices', isAuthenticated, deviceRoutes)
-app.use('/locateme/position', isAuthenticated, positionRoutes)
+
+// public
+app.use('/locateme/position', positionRoutes)
 
 module.exports = app
