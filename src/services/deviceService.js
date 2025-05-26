@@ -13,3 +13,14 @@ exports.saveDeviceIfNotExists = async (deviceData) => {
 
   await pool.query(query, values);
 };
+
+exports.getUserDevices = async (user) => {
+  const { id: userId } = user
+
+  const result = await pool.query(
+    `SELECT * FROM user_device_status WHERE user_id = $1 ORDER BY device_name`,
+    [userId]
+  )
+
+  return result.rows
+}

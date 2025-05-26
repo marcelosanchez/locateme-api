@@ -9,10 +9,12 @@ const session = require('express-session')
 const passport = require('passport')
 const pgSession = require('connect-pg-simple')(session)
 const { pool } = require('./config/db.js')
+const { configurePassport } = require('./config/passport')
 const authRoutes = require('./routes/authRoutes')
+const overviewRoutes = require('./routes/overviewRoutes')
 const deviceRoutes = require('./routes/deviceRoutes')
 const positionRoutes = require('./routes/positionRoutes')
-const { configurePassport } = require('./config/passport')
+const { isAuthenticated } = require('./middlewares/authMiddleware')
 
 const app = express()
 
@@ -30,7 +32,7 @@ app.use(helmet())
 app.use(morgan('dev'))
 app.use(express.json())
 
-// sessions
+// session middleware
 app.use(session({
   store: new pgSession({ pool, tableName: 'user_sessions' }),
   secret: process.env.SESSION_SECRET || 'default_session_secret',
@@ -50,7 +52,9 @@ app.use(passport.session())
 
 // routes
 app.use('/auth', authRoutes)
-app.use('/locateme/devices', deviceRoutes)
-app.use('/locateme/position', positionRoutes)
+
+app.use('/locateme/overview', isAuthenticated, overviewRoutes)
+app.use('/locateme/devices', isAuthenticated, deviceRoutes)
+app.use('/locateme/position', isAuthenticated, positionRoutes)
 
 module.exports = app

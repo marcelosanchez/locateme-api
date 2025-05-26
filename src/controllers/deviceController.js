@@ -1,5 +1,8 @@
 const pool = require('../config/db').pool
+const deviceService = require('../services/deviceService')
+const positionService = require('../services/positionService')
 
+// GET /locateme/devices
 exports.getUserDevices = async (req, res) => {
   try {
     const userId = req.user.id
@@ -14,6 +17,7 @@ exports.getUserDevices = async (req, res) => {
   }
 }
 
+// GET /locateme/devices/:device_id
 exports.getDeviceById = async (req, res) => {
   try {
     const userId = req.user.id
@@ -36,6 +40,7 @@ exports.getDeviceById = async (req, res) => {
   }
 }
 
+// GET /locateme/devices/raw/all (staff only)
 exports.getAllRawDevices = async (req, res) => {
   try {
     const { rows } = await pool.query(
@@ -49,5 +54,28 @@ exports.getAllRawDevices = async (req, res) => {
   } catch (err) {
     console.error('[DeviceController] getAllRawDevices error:', err)
     res.status(500).json({ error: 'Error fetching all devices' })
+  }
+}
+
+// GET /locateme/overview
+exports.getOverview = async (req, res) => {
+  try {
+    const devices = await deviceService.getUserDevices(req.user)
+    const positions = await positionService.fetchLatestPositions()
+
+    const merged = devices.map(device => {
+      const match = positions.find(p => p.device_id === device.device_id)
+      return {
+        ...device,
+        latitude: match?.latitude ?? null,
+        longitude: match?.longitude ?? null,
+        readable_datetime: match?.readable_datetime ?? null,
+      }
+    })
+
+    res.json(merged)
+  } catch (err) {
+    console.error('[getOverview] Error:', err.message || err)
+    res.status(500).json({ error: 'Internal server error' })
   }
 }
