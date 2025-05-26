@@ -11,6 +11,6 @@ router.get('/google/callback', passport.authenticate('google', { failureRedirect
 })
 router.post('/google/login', googleLogin)
 router.get('/me', isAuthenticated, getSession)
-router.get('/logout', isAuthenticated, logout)
+router.get('/logout', logout)
 
 module.exports = router
