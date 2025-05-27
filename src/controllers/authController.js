@@ -1,3 +1,4 @@
+const jwt = require('jsonwebtoken')
 const { OAuth2Client } = require('google-auth-library')
 const { findOrCreateUser } = require('../services/userService')
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID)
@@ -21,15 +22,23 @@ const googleLogin = async (req, res) => {
     }
 
     const user = await findOrCreateUser(payload)
-    if (!user?.active) {return res.status(403).json({ error: 'User is inactive' })}
+    if (!user?.active) {
+      return res.status(403).json({ error: 'User is inactive' })
+    }
 
-    req.login(user, err => {
-      if (err) return res.status(500).json({ error: 'Login failed' })
-      req.session.save(err => {
-        if (err) return res.status(500).json({ error: 'Session save failed' })
-        res.json(user)
-      })
-    })
+    const jwtToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        is_staff: user.is_staff,
+        name: user.name,
+        picture: user.picture,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+
+    res.status(200).json({ token: jwtToken, user })
   } catch (err) {
     console.error('[Google login]', err.message || err)
     return res.status(401).json({ error: 'Invalid token or authentication failed' })
@@ -44,15 +53,9 @@ const getSession = (req, res) => {
 }
 
 const logout = (req, res) => {
-  req.logout(err => {
-    if (err) return res.status(500).json({ error: 'Logout failed' })
-    req.session.destroy(err => {
-      if (err) return res.status(500).json({ error: 'Session destroy failed' })
-      res.clearCookie('connect.sid')
-      req.session = null
-      res.status(200).json({ message: 'Logged out successfully' })
-    })
-  })
+  // logout does not invalidate JWT on server
+  // just notifies client to remove it
+  res.status(200).json({ message: 'Client must remove JWT token' })
 }
 
 module.exports = {
