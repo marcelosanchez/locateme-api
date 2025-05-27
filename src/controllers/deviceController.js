@@ -62,6 +62,7 @@ exports.getMapPositions = async (req, res) => {
   try {
     const devices = await deviceService.getUserDevices(req.user)
     const positions = await positionService.fetchLatestPositions()
+    const defaultDeviceId = req.user.default_device_id
 
     const merged = devices.map(device => {
       const match = positions.find(p => p.device_id === device.device_id)
@@ -74,6 +75,7 @@ exports.getMapPositions = async (req, res) => {
         latitude: match?.latitude ?? null,
         longitude: match?.longitude ?? null,
         readable_datetime: match?.readable_datetime ?? null,
+        is_default: device.device_id === defaultDeviceId,
       }
     })
 

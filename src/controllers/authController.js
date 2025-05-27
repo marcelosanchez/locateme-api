@@ -33,6 +33,7 @@ const googleLogin = async (req, res) => {
         is_staff: user.is_staff,
         name: user.name,
         picture: user.picture,
+        default_device_id: user.default_device_id || null,
       },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
