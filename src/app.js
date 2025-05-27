@@ -7,9 +7,10 @@ const helmet = require('helmet')
 const morgan = require('morgan')
 
 const authRoutes = require('./routes/authRoutes')
-const overviewRoutes = require('./routes/overviewRoutes')
 const deviceRoutes = require('./routes/deviceRoutes')
 const positionRoutes = require('./routes/positionRoutes')
+const mapRoutes = require('./routes/mapRoutes')
+const sidebarRoutes = require('./routes/sidebarRoutes')
 const { authenticateToken, isStaff } = require('./middlewares/authMiddleware')
 
 const app = express()
@@ -32,8 +33,9 @@ app.use(express.json())
 app.use('/auth', authRoutes)
 
 // protected
-app.use('/locateme/overview', authenticateToken, overviewRoutes)
 app.use('/locateme/devices', authenticateToken, deviceRoutes)
+app.use('/locateme/map', authenticateToken, mapRoutes)
+app.use('/locateme/sidebar', authenticateToken, sidebarRoutes)
 
 // public
 app.use('/locateme/position', positionRoutes)

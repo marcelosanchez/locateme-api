@@ -4,7 +4,6 @@ const { authenticateToken, isStaff } = require('../middlewares/authMiddleware')
 const deviceController = require('../controllers/deviceController')
 
 router.get('/raw/all', authenticateToken, isStaff, deviceController.getAllRawDevices)
-router.get('/overview', authenticateToken, deviceController.getOverview)
 router.get('/:device_id', authenticateToken, deviceController.getDeviceById)
 router.get('/', authenticateToken, deviceController.getUserDevices)
 

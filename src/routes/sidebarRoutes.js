@@ -1,8 +1,8 @@
 const express = require('express')
 const router = express.Router()
-const { getOverview } = require('../controllers/deviceController')
 const { authenticateToken } = require('../middlewares/authMiddleware')
+const { getSidebarDevices } = require('../controllers/deviceController')
 
-router.get('/', authenticateToken, getOverview)
+router.get('/devices', authenticateToken, getSidebarDevices)
 
 module.exports = router

@@ -57,8 +57,8 @@ exports.getAllRawDevices = async (req, res) => {
   }
 }
 
-// GET /locateme/overview
-exports.getOverview = async (req, res) => {
+// GET /locateme/map/positions
+exports.getMapPositions = async (req, res) => {
   try {
     const devices = await deviceService.getUserDevices(req.user)
     const positions = await positionService.fetchLatestPositions()
@@ -66,7 +66,11 @@ exports.getOverview = async (req, res) => {
     const merged = devices.map(device => {
       const match = positions.find(p => p.device_id === device.device_id)
       return {
-        ...device,
+        device_id: device.device_id,
+        device_name: device.device_name,
+        device_icon: device.device_icon,
+        person_name: device.person_name,
+        person_emoji: device.person_emoji,
         latitude: match?.latitude ?? null,
         longitude: match?.longitude ?? null,
         readable_datetime: match?.readable_datetime ?? null,
@@ -75,7 +79,18 @@ exports.getOverview = async (req, res) => {
 
     res.json(merged)
   } catch (err) {
-    console.error('[getOverview] Error:', err.message || err)
+    console.error('[getMapPositions] Error:', err.message || err)
+    res.status(500).json({ error: 'Internal server error' })
+  }
+}
+
+// GET /locateme/sidebar/devices
+exports.getSidebarDevices = async (req, res) => {
+  try {
+    const devices = await deviceService.getUserDevices(req.user)
+    res.json(devices)
+  } catch (err) {
+    console.error('[getSidebarDevices] Error:', err.message || err)
     res.status(500).json({ error: 'Internal server error' })
   }
 }
