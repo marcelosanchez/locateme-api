@@ -31,7 +31,6 @@ const googleLogin = async (req, res) => {
         id: user.id,
         email: user.email,
         is_staff: user.is_staff,
-        picture: user.picture,
         default_device_id: user.default_device_id || null,
       },
       process.env.JWT_SECRET,
@@ -44,7 +43,6 @@ const googleLogin = async (req, res) => {
         id: user.id,
         email: user.email,
         is_staff: user.is_staff,
-        picture: user.picture,
         default_device_id: user.default_device_id || null,
       }
     })

@@ -9,7 +9,7 @@ const pool = require('../db');
 async function findOrCreateUser(profile) {
   const googleId = profile.sub || profile.id;
   const email = profile.email || null;
-  const USER_COLUMNS = 'id, email, google_id, active, is_staff, picture, default_device_id';
+  const USER_COLUMNS = 'id, email, google_id, active, is_staff, default_device_id';
 
   console.log('[AUTH] Extracted googleId:', googleId);
   console.log('[AUTH] Extracted email:', email);
