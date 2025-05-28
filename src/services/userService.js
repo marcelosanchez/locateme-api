@@ -9,6 +9,7 @@ const pool = require('../db');
 async function findOrCreateUser(profile) {
   const googleId = profile.sub || profile.id;
   const email = profile.email || null;
+  const USER_COLUMNS = 'id, email, google_id, active, is_staff, name, picture, default_device_id';
 
   console.log('[AUTH] Extracted googleId:', googleId);
   console.log('[AUTH] Extracted email:', email);
@@ -20,7 +21,9 @@ async function findOrCreateUser(profile) {
   try {
     // Search for an existing user
     const { rows } = await pool.query(
-      'SELECT * FROM users WHERE google_id = $1',
+      `SELECT ${USER_COLUMNS}
+      FROM users
+      WHERE google_id = $1`,
       [googleId]
     );
 
@@ -33,7 +36,7 @@ async function findOrCreateUser(profile) {
     const { rows: insertedRows } = await pool.query(
       `INSERT INTO users (email, google_id, active)
       VALUES ($1, $2, false)
-      RETURNING *`,
+      RETURNING ${USER_COLUMNS}`,
       [email, googleId]
     );
 
