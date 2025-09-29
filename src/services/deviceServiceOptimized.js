@@ -20,7 +20,7 @@ exports.getUserDevices = async (user) => {
     const query = `
       SELECT 
         device_id, device_name, device_icon, device_type, is_primary,
-        person_id, person_name, person_picture,
+        person_id, person_name,
         latitude, longitude, readable_datetime, battery_level, battery_status
       FROM sidebar_device_cache
       ORDER BY device_name
@@ -35,7 +35,7 @@ exports.getUserDevices = async (user) => {
     const query = `
       SELECT 
         sdc.device_id, sdc.device_name, sdc.device_icon, sdc.device_type,
-        sdc.is_primary, sdc.person_id, sdc.person_name, sdc.person_picture,
+        sdc.is_primary, sdc.person_id, sdc.person_name,
         sdc.latitude, sdc.longitude, sdc.readable_datetime,
         sdc.battery_level, sdc.battery_status
       FROM user_device_access uda
@@ -64,7 +64,6 @@ exports.getUserDevicesOriginal = async (user) => {
         d.is_primary,
         d.person_id,
         p.name AS person_name,
-        p.picture AS person_picture,
         lp.latitude,
         lp.longitude,
         lp.readable_datetime,
