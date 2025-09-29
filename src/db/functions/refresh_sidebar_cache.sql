@@ -87,7 +87,7 @@ BEGIN
     
     RETURN QUERY SELECT 
         cache_age,
-        cache_age > 60, -- Consider stale if older than 60 seconds
+        cache_age > 300, -- Consider stale if older than 5 minutes (300 seconds)
         last_refresh_time,
         row_count;
 END;

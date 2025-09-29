@@ -34,7 +34,7 @@ const googleLogin = async (req, res) => {
         default_device_id: user.default_device_id || null,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '90d' } // 3 months
     )
 
     res.status(200).json({

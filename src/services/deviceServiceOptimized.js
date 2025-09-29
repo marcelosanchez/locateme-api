@@ -87,29 +87,44 @@ exports.getUserDevicesOriginal = async (user) => {
 };
 
 // Cache-aware method with freshness checking
-exports.getUserDevicesWithFreshness = async (user, maxCacheAgeSeconds = 1800) => {
+const CACHE_STALENESS_THRESHOLD_MS = parseInt(process.env.CACHE_STALENESS_THRESHOLD_MS) || 300000; // 5 minutes default
+const CACHE_STALENESS_THRESHOLD_SECONDS = Math.floor(CACHE_STALENESS_THRESHOLD_MS / 1000);
+
+exports.getUserDevicesWithFreshness = async (user, maxCacheAgeSeconds = CACHE_STALENESS_THRESHOLD_SECONDS) => {
   try {
     // Check cache freshness first
     const freshnessQuery = `SELECT * FROM get_sidebar_cache_freshness()`;
     const freshnessResult = await pool.query(freshnessQuery);
     const freshness = freshnessResult.rows[0];
     
-    // If cache is too stale, trigger refresh and use fallback
+    // Smart refresh strategy based on cache age
     if (freshness.is_stale || freshness.cache_age_seconds > maxCacheAgeSeconds) {
-      console.warn(`[deviceService] Sidebar cache is stale (${freshness.cache_age_seconds}s old), using fallback query`);
-      const devices = await exports.getUserDevicesOriginal(user);
+      console.log(`[deviceService] Cache age: ${freshness.cache_age_seconds}s (threshold: ${maxCacheAgeSeconds}s), refreshing...`);
       
-      // Trigger async refresh (don't wait for it)
-      pool.query('SELECT refresh_sidebar_cache()').catch(err => {
-        console.error('[deviceService] Failed to refresh sidebar cache:', err);
-      });
-      
-      return {
-        devices,
-        cache_age_seconds: freshness.cache_age_seconds,
-        is_stale: true,
-        source: 'fallback'
-      };
+      // Try to refresh cache first, then serve data
+      try {
+        await pool.query('SELECT refresh_sidebar_cache()');
+        console.log(`[deviceService] ✅ Cache refreshed successfully`);
+        
+        // Serve fresh data from refreshed cache
+        const devices = await exports.getUserDevicesOptimized(user);
+        return {
+          devices,
+          cache_age_seconds: 0, // Fresh cache
+          is_stale: false,
+          source: 'refreshed_cache'
+        };
+      } catch (refreshError) {
+        console.error('[deviceService] ❌ Cache refresh failed, using fallback:', refreshError);
+        // Fallback to original query if refresh fails
+        const devices = await exports.getUserDevicesOriginal(user);
+        return {
+          devices,
+          cache_age_seconds: freshness.cache_age_seconds,
+          is_stale: true,
+          source: 'fallback'
+        };
+      }
     }
     
     // Use optimized query with fresh cache
