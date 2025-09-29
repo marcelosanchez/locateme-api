@@ -106,7 +106,7 @@ exports.getUserDevicesWithFreshness = async (user, maxCacheAgeSeconds = CACHE_ST
         console.log(`[deviceService] ✅ Cache refreshed successfully`);
         
         // Serve fresh data from refreshed cache
-        const devices = await exports.getUserDevicesOptimized(user);
+        const devices = await exports.getUserDevices(user);
         return {
           devices,
           cache_age_seconds: 0, // Fresh cache
