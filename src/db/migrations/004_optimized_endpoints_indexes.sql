@@ -12,6 +12,10 @@ DROP INDEX IF EXISTS idx_sidebar_positions_only;
 DROP INDEX IF EXISTS idx_single_device_position;
 DROP INDEX IF EXISTS idx_device_route_time;
 DROP INDEX IF EXISTS idx_batch_positions_filter;
+DROP INDEX IF EXISTS idx_device_route_recent;
+DROP INDEX IF EXISTS idx_batch_user_device_access;
+DROP INDEX IF EXISTS idx_devices_active_status;
+DROP INDEX IF EXISTS idx_sidebar_cache_freshness;
 
 -- =============================================================================
 -- SIDEBAR OPTIMIZATION INDEXES
@@ -38,8 +42,8 @@ WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 -- Optimized index for single device position lookups
 -- Optimizes: /devices/:id/position endpoint (real-time queries)
 CREATE INDEX CONCURRENTLY idx_single_device_position
-ON latest_positions (device_id) 
-INCLUDE (latitude, longitude, readable_datetime, battery_level, battery_status, timestamp, horizontal_accuracy, altitude)
+ON positions (device_id, timestamp DESC) 
+INCLUDE (latitude, longitude, readable_datetime, battery_level, battery_status, horizontal_accuracy, altitude)
 WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 
 -- =============================================================================
@@ -57,36 +61,54 @@ WHERE latitude IS NOT NULL AND longitude IS NOT NULL;
 -- Optimizes: Route queries with time filtering
 CREATE INDEX CONCURRENTLY idx_device_route_recent
 ON positions (device_id, timestamp DESC)
+INCLUDE (latitude, longitude, readable_datetime, horizontal_accuracy, battery_level)
 WHERE latitude IS NOT NULL 
-  AND longitude IS NOT NULL 
-  AND timestamp > (EXTRACT(epoch FROM NOW() - INTERVAL '48 hours') * 1000);
+  AND longitude IS NOT NULL;
 
 -- =============================================================================
 -- BATCH OPERATIONS OPTIMIZATION INDEXES
 -- =============================================================================
 
--- Composite index for user device access with batch filtering
+-- Composite index for user device access with batch filtering (if not exists)
 -- Optimizes: Batch position queries with user filtering
-CREATE INDEX CONCURRENTLY idx_batch_user_device_access
-ON user_device_access (user_id, device_id)
-INCLUDE (device_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_batch_user_device_access') THEN
+        CREATE INDEX CONCURRENTLY idx_batch_user_device_access
+        ON user_device_access (user_id, device_id)
+        INCLUDE (device_id);
+    END IF;
+END
+$$;
 
--- Covering index for devices table with active status
+-- Covering index for devices table with active status (if not exists)
 -- Optimizes: Device validation queries
-CREATE INDEX CONCURRENTLY idx_devices_active_status
-ON devices (id, is_active) 
-INCLUDE (name, icon, device_type, person_id, is_primary)
-WHERE is_active = true;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_devices_active_status') THEN
+        CREATE INDEX CONCURRENTLY idx_devices_active_status
+        ON devices (id, is_active) 
+        INCLUDE (name, icon, device_type, person_id, is_primary)
+        WHERE is_active = true;
+    END IF;
+END
+$$;
 
 -- =============================================================================
 -- PERFORMANCE MONITORING INDEXES
 -- =============================================================================
 
--- Index for cache freshness monitoring
+-- Index for cache freshness monitoring (if not exists)
 -- Optimizes: Cache age and freshness checks
-CREATE INDEX CONCURRENTLY idx_sidebar_cache_freshness
-ON sidebar_device_cache (cache_updated_at DESC)
-INCLUDE (device_id);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_sidebar_cache_freshness') THEN
+        CREATE INDEX CONCURRENTLY idx_sidebar_cache_freshness
+        ON sidebar_device_cache (cache_updated_at DESC)
+        INCLUDE (device_id);
+    END IF;
+END
+$$;
 
 -- =============================================================================
 -- QUERY PERFORMANCE VERIFICATION
@@ -95,20 +117,24 @@ INCLUDE (device_id);
 -- Test queries to verify index effectiveness
 SELECT 
     'sidebar_names_test' as test_name,
-    COUNT(*) as result_count
+    device_id,
+    device_name
 FROM sidebar_device_cache 
 WHERE device_name IS NOT NULL
 ORDER BY device_name
-LIMIT 10;
+LIMIT 5;
 
 SELECT 
     'map_positions_test' as test_name,
-    COUNT(*) as result_count
+    device_id,
+    device_name,
+    latitude,
+    longitude
 FROM sidebar_device_cache 
 WHERE latitude IS NOT NULL 
   AND longitude IS NOT NULL
 ORDER BY device_name
-LIMIT 10;
+LIMIT 5;
 
 -- Display created indexes for verification
 SELECT 
@@ -137,9 +163,9 @@ WHERE indexname LIKE '%sidebar%'
 ORDER BY pg_relation_size(indexname::regclass) DESC;
 
 -- Performance analysis for the new indexes
-EXPLAIN (ANALYZE, BUFFERS) 
+EXPLAIN (ANALYZE, BUFFERS, COSTS OFF) 
 SELECT device_id, device_name, device_icon, person_name
 FROM sidebar_device_cache 
 WHERE device_name IS NOT NULL
 ORDER BY device_name
-LIMIT 50;
+LIMIT 10;
