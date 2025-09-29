@@ -195,8 +195,8 @@ FROM sidebar_device_cache;
 -- Show created triggers
 SELECT 
     trigger_name,
-    table_name,
+    event_object_table as table_name,
     event_manipulation
 FROM information_schema.triggers 
 WHERE trigger_name LIKE '%refresh_sidebar%'
-ORDER BY table_name, trigger_name;
+ORDER BY event_object_table, trigger_name;
