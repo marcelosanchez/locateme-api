@@ -1,17 +1,17 @@
 -- ======================================================================
--- Remove person_picture Column from sidebar_device_cache
+-- Fix Duplicate Devices in sidebar_device_cache
 -- 
--- Purpose: Remove references to person_picture column that doesn't exist
--- Issue: sidebar_device_cache references non-existent person_picture column
--- Solution: Exclude person_picture from materialized view for now
+-- Purpose: Remove duplicate device entries from materialized view
+-- Issue: Multiple entries for same device_id causing unique index failure
+-- Solution: Use DISTINCT ON to ensure one record per device
 -- ======================================================================
 
 -- Drop the existing materialized view if it exists
 DROP MATERIALIZED VIEW IF EXISTS sidebar_device_cache CASCADE;
 
--- Recreate the materialized view WITHOUT person_picture column
+-- Recreate the materialized view WITHOUT duplicates using DISTINCT ON
 CREATE MATERIALIZED VIEW sidebar_device_cache AS
-SELECT 
+SELECT DISTINCT ON (uvd.id)
   uvd.user_id,
   uvd.id AS device_id,                    -- Frontend expects: device_id (string)
   uvd.name AS device_name,                -- Frontend expects: device_name (string)
@@ -37,11 +37,16 @@ SELECT
 FROM user_visible_devices uvd
 LEFT JOIN people p ON p.id = uvd.person_id
 LEFT JOIN latest_positions lp ON uvd.id = lp.device_id
-WHERE uvd.is_active = TRUE;
+WHERE uvd.is_active = TRUE
+ORDER BY uvd.id, uvd.user_id;  -- Order for DISTINCT ON
 
--- Add a regular index for efficient refreshes (not unique due to potential duplicates)
-CREATE INDEX CONCURRENTLY idx_sidebar_device_cache_device_id
+-- Now we can create the unique index since we eliminated duplicates
+CREATE UNIQUE INDEX CONCURRENTLY idx_sidebar_device_cache_unique_device
 ON sidebar_device_cache (device_id);
+
+-- Also add index for cache freshness queries
+CREATE INDEX CONCURRENTLY idx_sidebar_device_cache_updated_at
+ON sidebar_device_cache (cache_updated_at);
 
 -- Grant appropriate permissions
 GRANT SELECT ON sidebar_device_cache TO locator_user;
@@ -49,17 +54,33 @@ GRANT SELECT ON sidebar_device_cache TO locator_user;
 -- Initial refresh to populate the view
 REFRESH MATERIALIZED VIEW sidebar_device_cache;
 
--- Test the view to make sure it works
+-- Test the view to make sure no duplicates exist
 DO $$
 DECLARE
-    test_count INTEGER;
+    total_count INTEGER;
+    unique_device_count INTEGER;
+    duplicate_count INTEGER;
     sample_record RECORD;
 BEGIN
     -- Count total records
-    SELECT COUNT(*) INTO test_count FROM sidebar_device_cache;
-    RAISE NOTICE 'sidebar_device_cache contains % records', test_count;
+    SELECT COUNT(*) INTO total_count FROM sidebar_device_cache;
     
-    -- Try to select a sample record without person_picture
+    -- Count unique devices  
+    SELECT COUNT(DISTINCT device_id) INTO unique_device_count FROM sidebar_device_cache;
+    
+    -- Calculate duplicates
+    duplicate_count := total_count - unique_device_count;
+    
+    RAISE NOTICE 'sidebar_device_cache contains % total records', total_count;
+    RAISE NOTICE 'sidebar_device_cache contains % unique devices', unique_device_count;
+    
+    IF duplicate_count > 0 THEN
+        RAISE WARNING 'Found % duplicate device records!', duplicate_count;
+    ELSE
+        RAISE NOTICE '✅ No duplicate devices found';
+    END IF;
+    
+    -- Try to select a sample record
     SELECT device_id, device_name, person_name 
     INTO sample_record
     FROM sidebar_device_cache 
@@ -84,9 +105,9 @@ FROM information_schema.columns
 WHERE table_name = 'sidebar_device_cache'
 ORDER BY ordinal_position;
 
--- Show a few sample records
+-- Show all unique devices (should be no duplicates)
 SELECT 
     device_id, device_name, person_name,
     latitude, longitude, battery_level
 FROM sidebar_device_cache 
-LIMIT 3;
+ORDER BY device_name;
