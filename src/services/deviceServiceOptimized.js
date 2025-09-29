@@ -87,7 +87,7 @@ exports.getUserDevicesOriginal = async (user) => {
 };
 
 // Cache-aware method with freshness checking
-exports.getUserDevicesWithFreshness = async (user, maxCacheAgeSeconds = 300) => {
+exports.getUserDevicesWithFreshness = async (user, maxCacheAgeSeconds = 1800) => {
   try {
     // Check cache freshness first
     const freshnessQuery = `SELECT * FROM get_sidebar_cache_freshness()`;
