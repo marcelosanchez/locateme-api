@@ -389,10 +389,5 @@ exports.getDeviceRoute = async (req, res) => {
   }
 };
 
-module.exports = {
-  getDeviceNamesForSidebar,
-  getAllDevicePositions,
-  getSingleDevicePosition,
-  getBatchPositions,
-  getDeviceRoute
-};
+// Export all functions directly from exports
+// (functions are already attached to exports object above)
