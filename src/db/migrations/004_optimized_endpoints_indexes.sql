@@ -69,46 +69,28 @@ WHERE latitude IS NOT NULL
 -- BATCH OPERATIONS OPTIMIZATION INDEXES
 -- =============================================================================
 
--- Composite index for user device access with batch filtering (if not exists)
+-- Composite index for user device access with batch filtering
 -- Optimizes: Batch position queries with user filtering
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_batch_user_device_access') THEN
-        CREATE INDEX CONCURRENTLY idx_batch_user_device_access
-        ON user_device_access (user_id, device_id)
-        INCLUDE (device_id);
-    END IF;
-END
-$$;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_batch_user_device_access
+ON user_device_access (user_id, device_id)
+INCLUDE (device_id);
 
--- Covering index for devices table with active status (if not exists)
+-- Covering index for devices table with active status
 -- Optimizes: Device validation queries
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_devices_active_status') THEN
-        CREATE INDEX CONCURRENTLY idx_devices_active_status
-        ON devices (id, is_active) 
-        INCLUDE (name, icon, device_type, person_id, is_primary)
-        WHERE is_active = true;
-    END IF;
-END
-$$;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_devices_active_status
+ON devices (id, is_active) 
+INCLUDE (name, icon, device_type, person_id, is_primary)
+WHERE is_active = true;
 
 -- =============================================================================
 -- PERFORMANCE MONITORING INDEXES
 -- =============================================================================
 
--- Index for cache freshness monitoring (if not exists)
+-- Index for cache freshness monitoring
 -- Optimizes: Cache age and freshness checks
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_indexes WHERE indexname = 'idx_sidebar_cache_freshness') THEN
-        CREATE INDEX CONCURRENTLY idx_sidebar_cache_freshness
-        ON sidebar_device_cache (cache_updated_at DESC)
-        INCLUDE (device_id);
-    END IF;
-END
-$$;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sidebar_cache_freshness
+ON sidebar_device_cache (cache_updated_at DESC)
+INCLUDE (device_id);
 
 -- =============================================================================
 -- QUERY PERFORMANCE VERIFICATION
